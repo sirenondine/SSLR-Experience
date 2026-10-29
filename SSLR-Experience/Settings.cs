@@ -71,9 +71,17 @@ namespace SslrExperience
         [SynthesisTooltip("Skill Books value multiplier, %. Requires Skill Books patching to be enabled.")]
         public uint SkillBooksValueMultiplier = 200;
 
-        [SynthesisTooltip("Remove \"skills improve X% faster/slower\" text from effect, perk and spell descriptions\n" +
-            "(Rested, Lover's Comfort, ...), since those bonuses do nothing once skill gains are suppressed.")]
-        public bool FixSkillRateText = true;
+        [SynthesisSettingName("Skill-rate effects")]
+        [SynthesisTooltip("\"Skills improve X% faster/slower\" effects (Rested, Lover's Comfort, ...) do nothing once skill gains are suppressed.\n" +
+            "Leave - change nothing\n" +
+            "StripText - remove the skill-rate sentence from effect, perk and spell descriptions\n" +
+            "BonusXP - character XP gains are scaled by the same multiplier instead (penalties too); skill-specific ones fall back to StripText")]
+        public SkillRateMode SkillRateEffects = SkillRateMode.BonusXP;
+
+        public enum SkillRateMode
+        {
+            Leave, StripText, BonusXP
+        }
     }
 
     public class RacesSettings

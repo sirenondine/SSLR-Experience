@@ -28,11 +28,23 @@ itself an extension of Azraerl's Requiem-Experience.
 * **General**: quest patching, level-up curve (default 100/50; vanilla is 75/25), Experience preset (`None`, `TrueUnlevelled`, `ExtraRewarding`).
 * **Skill caps (read by SSLR)**: `fSkillCapBase`, `fSkillCapMult`, `bUseRacialCaps`, optional `iMaxPlayerLevel`.
 * **Skills**: suppress use-based skill gains (AVIF `UseMult = 0`, `bEnableSkillXP = false`), strip skill books (value x2),
-  remove dead "skills improve X% faster/slower" sentences from effect, perk and spell descriptions (Rested, Lover's Comfort,
-  perks using the `ModSkillUse` entry point). Trainers are left untouched: training raises skill levels directly.
+  and what to do with "skills improve X% faster/slower" effects (Rested, Lover's Comfort, perks using the `ModSkillUse`
+  entry point), which do nothing under SSLR:
+  * `BonusXP` (default): each perk whose multiplier applies to all skills also grants a hidden ability that scales
+    character XP gains by the same multiplier, penalties included. A controller quest (`Papyrus/Source`) polls player XP via
+    SKSE only while such an effect is active. Descriptions are reworded to experience. Skill-specific ones fall back to `StripText`.
+  * `StripText`: remove the skill-rate sentence from effect, perk and spell descriptions.
+  * `Leave`: change nothing.
+
+  Trainers are left untouched: training raises skill levels directly.
 * **Killing XP**: SkyPatcher levels toggle, averaging mode, level-to-XP formula, plus `RaceSettings.json` (Ignore / Unique / Groups / Override).
 
 Quest retyping rules live in `QuestSettings.json` (unchanged from the base).
+
+## Papyrus scripts
+
+`Papyrus/Source/*.psc` compile against vanilla sources plus SKSE's `Game.psc`; the `.pex` files in `Papyrus/Scripts` are
+embedded in the patcher and written to `Data/Scripts` when `BonusXP` creates records. Recompile after editing a source.
 
 ## Installing
 

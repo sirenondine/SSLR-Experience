@@ -21,7 +21,7 @@ itself an extension of Azraerl's Requiem-Experience.
   replacing Experience's hand-curated list. NPCs already listed in any other actor file are skipped.
 * **Skill books** are detected through Mutagen's `BookSkill` teach target (the base's flag-bit check matches nothing on current Mutagen).
 * `fXPLevelUpBase`/`fXPLevelUpMult` override the vanilla GMSTs instead of adding duplicate records.
-* .NET 9, Mutagen 0.54.4, Synthesis 0.36.6; no Windows-only paths.
+* .NET 10, Mutagen 0.54.4, Synthesis 0.36.6; no Windows-only paths.
 
 ## Settings
 
@@ -60,7 +60,7 @@ Keep the files shipped by the Experience mod itself.
 
 ```
 dotnet build -c Release SSLR-Experience
-dotnet SSLR-Experience/bin/Release/net9.0/SSLR-Experience.dll run-patcher \
+dotnet SSLR-Experience/bin/Release/net10.0/SSLR-Experience.dll run-patcher \
   --DataFolderPath /tmp/sslr-run/Data --GameRelease SkyrimSE \
   --LoadOrderFilePath /tmp/sslr-run/plugins.txt \
   --OutputPath /tmp/sslr-run/out/SSLR_Experience_Patch.esp \

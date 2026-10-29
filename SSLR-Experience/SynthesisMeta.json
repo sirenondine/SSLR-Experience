@@ -1,0 +1,8 @@
+{
+  "Nickname": "SSLR - Experience Patcher",
+  "Visibility": "Visible",
+  "OneLineDescription": "Experience patcher tuned for Static Skill Leveling Rewritten",
+  "LongDescription": "Based on Arkay's Commandment Requiem-Experience (itself extending Azraerl's Requiem-Experience). Suppresses use-based skill gains, writes Experience 3.x skill caps that SSLR reads, and computes kill XP from SkyPatcher-applied NPC levels.",
+  "PreferredAutoVersioning": "Default",
+  "RequiredMods": []
+}

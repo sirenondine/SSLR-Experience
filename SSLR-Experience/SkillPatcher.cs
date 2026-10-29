@@ -1,17 +1,14 @@
-﻿using Mutagen.Bethesda;
+using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.Synthesis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RequiemExperience
+namespace SslrExperience
 {
-    [SupportedOSPlatform("windows7.0")]
-    [SupportedOSPlatform("windows10")]
     class SkillPatcher
     {
         private static readonly HashSet<string> skills = new();
@@ -70,24 +67,22 @@ namespace RequiemExperience
             Console.WriteLine($"Settings.SkillSettings.PatchSkillBooks is {Settings.SkillSettings.PatchSkillBooks}\r\n + Value multiplier is: {mult}x");
             if (Settings.SkillSettings.PatchSkillBooks)
             {
+                int count = 0;
                 foreach (var book in state.LoadOrder.PriorityOrder.WinningOverrides<IBookGetter>())
                 {
-                    if (book.Flags.HasFlag((Book.Flag)BookTeachesSkill))
+                    if (book.Teaches is IBookSkillGetter { Skill: not null })
                     {
                         var pb = state.PatchMod.Books.GetOrAddAsOverride(book);
-                        pb.Teaches?.Clear();
-                        if(pb.Flags.HasFlag((Book.Flag)BookTeachesSkill))
-                        {
-                            pb.Flags ^= (Book.Flag)BookTeachesSkill;
-                        }
+                        pb.Teaches = new BookTeachesNothing();
                         pb.Value = (uint)(pb.Value * mult);
+                        count++;
                     }
                 }
+                Console.WriteLine($" + Skill books converted: {count}");
                 any = true;
             }
 
             return any;
         }
-        private readonly static int BookTeachesSkill = 1;
     }
 }

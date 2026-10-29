@@ -1,8 +1,0 @@
-{
-  "Nickname": "Arkay's Commmandment - Requiem-Experience",
-  "Visibility": "Visible",
-  "OneLineDescription": "Patcher for Experience mod, most suitable for Arkay's Commandment",
-  "LongDescription": "Extend's Azraerl's Requiem-Experience Patcher, customizing it for Arkay's Commandment.",
-  "PreferredAutoVersioning": "Default",
-  "RequiredMods": []
-}

@@ -1,4 +1,4 @@
-﻿using Mutagen.Bethesda;
+using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.Synthesis;
 using Newtonsoft.Json.Linq;
@@ -6,15 +6,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace RequiemExperience
+namespace SslrExperience
 {
-    [SupportedOSPlatform("windows7.0")]
-    [SupportedOSPlatform("windows10")]
     class QuestPatcher
     {
         public static bool RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, Settings Settings)
@@ -25,7 +22,7 @@ namespace RequiemExperience
                 return false;
             }
 
-            string settingsFile = state.ExtraSettingsDataPath + @"\QuestSettings.json";
+            string settingsFile = Path.Combine(state.ExtraSettingsDataPath!, "QuestSettings.json");
             var questOverride = new Dictionary<Regex, Quest.TypeEnum>();
             var completeFlags = new Dictionary<Regex, int[]>();
             var failFlags = new Dictionary<Regex, int[]>();
@@ -180,9 +177,8 @@ namespace RequiemExperience
                             ConditionFloat cond = new();
                             cond.CompareOperator = CompareOperator.NotEqualTo;
                             cond.ComparisonValue = 1.0f;
-                            FunctionConditionData func = new();
-                            func.Function = Condition.Function.GetInCurrentLocFormList;
-                            func.ParameterOneRecord.SetTo(radiantExcl);
+                            GetInCurrentLocFormListConditionData func = new();
+                            func.FormList.Link.SetTo(radiantExcl);
                             cond.Data = func;
                             alias.Conditions.Insert(1, cond);
                         }
@@ -206,9 +202,10 @@ namespace RequiemExperience
             }
             if (quests != null)
             {
-                var outputPath = $@"{state.DataFolderPath}\SKSE\Plugins\Experience\";
-                Console.WriteLine($@"Writing debug file: {outputPath}quests.csv");
-                File.WriteAllText($@"{outputPath}quests.csv", quests?.ToString());
+                var outputPath = Path.Combine(state.DataFolderPath, "SKSE", "Plugins", "Experience", "quests.csv");
+                Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+                Console.WriteLine($@"Writing debug file: {outputPath}");
+                File.WriteAllText(outputPath, quests.ToString());
             }
             return anyQuests;
         }

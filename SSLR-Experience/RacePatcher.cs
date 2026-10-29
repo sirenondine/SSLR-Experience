@@ -1,20 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
 using MathNet.Numerics.Statistics;
 using Mutagen.Bethesda;
+using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.Synthesis;
 using Newtonsoft.Json.Linq;
 
-namespace RequiemExperience
+namespace SslrExperience
 {
-    [SupportedOSPlatform("windows7.0")]
-    [SupportedOSPlatform("windows10")]
     class RacePatcher
     {
         public static bool RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, Settings Settings)
@@ -31,7 +29,7 @@ namespace RequiemExperience
 
             Expressive.Expression exp = new(Settings.RacesSettings.LevelFormula, Expressive.ExpressiveOptions.IgnoreCaseAll);
 
-            string settingsFile = state.ExtraSettingsDataPath + @"\RaceSettings.json";
+            string settingsFile = Path.Combine(state.ExtraSettingsDataPath!, "RaceSettings.json");
             var racesOverrs = new Dictionary<string, int>();
             var ignoredNPCs = new List<Regex>();
             var uniqueNPCs = new List<Regex>();
@@ -74,6 +72,21 @@ namespace RequiemExperience
                 $" + Level Expression is {Settings.RacesSettings.LevelFormula}\r\n" +
                 $" + Debug = {npcs != null}");
 
+            var experienceDir = Path.Combine(state.DataFolderPath, "SKSE", "Plugins", "Experience");
+            var racesDir = Path.Combine(experienceDir, "Races");
+            var actorsDir = Path.Combine(experienceDir, "Actors");
+
+            var skyPatcherLevels = new Dictionary<FormKey, int>();
+            if (Settings.RacesSettings.UseSkyPatcherLevels)
+            {
+                skyPatcherLevels = SkyPatcherLevels.Read(state.DataFolderPath, out int spFiles);
+                Console.WriteLine($" + SkyPatcher NPC levels: {skyPatcherLevels.Count} NPCs from {spFiles} files");
+            }
+
+            // NPCs already given XP by Experience's own (or other mods') actor files keep those values
+            var curatedActors = ReadCuratedActors(actorsDir, Settings.RacesSettings.ActorsOutputFile);
+            Console.WriteLine($" + Curated actor entries kept: {curatedActors.Count}");
+
             var racesLevels = new Dictionary<string, ICollection<double>>();
             var actorPlugins = new SortedDictionary<string, SortedSet<string>>();
 
@@ -93,7 +106,11 @@ namespace RequiemExperience
                 }
 
                 int level = 0;
-                if (npc.Configuration.Level is IPcLevelMult)
+                if (skyPatcherLevels.TryGetValue(npc.FormKey, out var spLevel))
+                {
+                    level = spLevel;
+                }
+                else if (npc.Configuration.Level is IPcLevelMultGetter)
                 {
                     level = npc.Configuration.CalcMinLevel;
                     if (npc.Configuration.CalcMaxLevel != 0)
@@ -134,6 +151,12 @@ namespace RequiemExperience
                     {
                         // filter away low level (or levelled) unique flagged NPCs
                         unique = false;
+                    }
+
+                    if (unique && level > 0 && curatedActors.Contains(npc.FormKey))
+                    {
+                        npcs?.Append(npc.EditorID + "," + EditorID + "," + level + "," + "curated" + "\r\n");
+                        continue;
                     }
 
                     if (unique && level > 0)
@@ -225,21 +248,45 @@ namespace RequiemExperience
             }
 
 
-            var outputPath = $@"{state.DataFolderPath}\SKSE\Plugins\Experience\";
-            Console.WriteLine($@"Creating folder: {outputPath}Races\");
-            Directory.CreateDirectory($@"{outputPath}Races\");
-            Console.WriteLine($@"Writing races patch: {outputPath}Races\{Settings.RacesSettings.OutputFile}");
-            File.WriteAllText($@"{outputPath}Races\{Settings.RacesSettings.OutputFile}", racesOutput.ToString());
-            Console.WriteLine($@"Writing actors patch: {outputPath}Actors\{Settings.RacesSettings.OutputFile}");
-            File.WriteAllText($@"{outputPath}Actors\{Settings.RacesSettings.OutputFile}", actorsOutput.ToString());
+            var racesFile = Path.Combine(racesDir, Settings.RacesSettings.OutputFile);
+            var actorsFile = Path.Combine(actorsDir, Settings.RacesSettings.ActorsOutputFile);
+            Directory.CreateDirectory(racesDir);
+            Directory.CreateDirectory(actorsDir);
+            Console.WriteLine($@"Writing races patch: {racesFile}");
+            File.WriteAllText(racesFile, racesOutput.ToString());
+            Console.WriteLine($@"Writing actors patch: {actorsFile}");
+            File.WriteAllText(actorsFile, actorsOutput.ToString());
 
             if (npcs != null)
             {
-                Console.WriteLine($@"Writing debug file: {outputPath}npcs.csv");
-                File.WriteAllText($@"{outputPath}npcs.csv", npcs.ToString());
+                var debugFile = Path.Combine(experienceDir, "npcs.csv");
+                Console.WriteLine($@"Writing debug file: {debugFile}");
+                File.WriteAllText(debugFile, npcs.ToString());
             }
 
             return any;
+        }
+
+        static HashSet<FormKey> ReadCuratedActors(string actorsDir, string ownFile)
+        {
+            var result = new HashSet<FormKey>();
+            if (!Directory.Exists(actorsDir)) return result;
+            foreach (var file in Directory.EnumerateFiles(actorsDir, "*.ini"))
+            {
+                if (Path.GetFileName(file).Equals(ownFile, StringComparison.OrdinalIgnoreCase)) continue;
+                foreach (var (section, key, _) in ExperienceIni.ReadPairs(file))
+                {
+                    if (section.Length == 0) continue;
+                    try
+                    {
+                        uint id = Convert.ToUInt32(key, 16) & 0xFFFFFF;
+                        result.Add(new FormKey(ModKey.FromFileName(section), id));
+                    }
+                    catch (FormatException) { }
+                    catch (ArgumentException) { }
+                }
+            }
+            return result;
         }
 
         static int Express(double level, Expressive.Expression ex)

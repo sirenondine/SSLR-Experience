@@ -1,32 +1,56 @@
-# Requiem-Experience
+# SSLR-Experience
 
-This is an auto-patcher which is meant to create patch for Experience mod, to be used along with Requiem - or any other overhaul which makes Skyrim world to be un-levelled.
+Synthesis patcher for [Experience](https://www.nexusmods.com/skyrimspecialedition/mods/17751) (3.x) tuned for
+[Static Skill Leveling Rewritten](https://www.nexusmods.com/skyrimspecialedition/mods/89940) (SSLR).
 
-# How to run patcher?
-Please follow steps in [Synthesis wiki](https://github.com/Mutagen-Modding/Synthesis/wiki/Installation)
+Based on [Arkay's Commandment - Requiem-Experience](https://github.com/bondpp7/Arkays-Commandment-Requiem-Experience),
+itself an extension of Azraerl's Requiem-Experience.
 
-# Patcher logic and settings
+## What changed from the base
 
-It takes care of few things:
-* Adjusts quest types for various mods to reduce/increase XP - would only affect quests which present in your load order:
-  * Vanilla Skyrim: reduces XP from Helgen & Whiterun main quests;
-  * Requiem: removes XP from Requiem install/init quest;
-  * Live Another Life: removes XP from Chargen and new life selection;
-  * SunHelm: removes XP from SunHelm install/init quest;
-  * Missives: here is the place where most of changes takes place, all the missives are being assigned with different quest types depending on their estimated difficulty. Also due to usage of regular expressions (masks), it's able to apply this changes to almost any additional regions (e.g. you have Wyrmstooth and Wyrmstooth Missives? they'll get auto-adjusted as well)
-* Creates/overwrites DefaultRaces.csv to assign appropriate values for kill XP, also highly dependant on your load order. General idea is to base of average level of enemy to calculate reward, with some edge cases covered with overrides. Keywords explained:
-  * Ignore: NPCs with Editor ID matching regex will be completely ignored while calculating average power of race;
-  * Unique: NPCs with Editor ID matching regex will be assigned with new race (generated as "<race EditorID>__<npc EditorID>") and thus will have unique XP value;
-  * Groups: NPCs with races in list will be grouped together to average over their power. Basically makes sure that, say, Bosmer and Nord bandits or vampires will have same XP value;
-  * Override: this particular Races (not NPCs!) will have its XP set to a constant provided.
-* Skills related changes:
-  * Suppresses Skill XP gain from use, e.g. disables vanilla skill levelling system. Meant to be used with mods which provide alternative Skill levelling (Requiem - Static Skill Levelling or 3Tweaks, for example). ___Untick this one if you are not planning to use such mods___;
-  * Removes Skills from Skill Books thus makes them to be a normal books. Also increases gold value of no-longer-Skill Books (default is 200%/2x)
+* **SSLR skill caps.** SSLR reads its per-skill caps from Experience (`cap = fSkillCapBase + fSkillCapMult x level`, plus racial
+  bonus). The base presets pinned caps flat at 100, which disables SSLR's cap progression. Caps are now patcher settings
+  (default 18 + 2/level, racial on: Experience's own defaults).
+* **Experience 3.x INI.** Presets use 3.x key names (`iXPQuestObjectives`, `fKillingMult`, `fLevelFactor`, `MilitaryCamp`, ...).
+  Instead of overwriting `Experience.ini`, the patcher merges only the keys it owns into the installed file and removes 2.x
+  keys left behind by older presets.
+* **SkyPatcher NPC levels.** Kill XP is averaged from NPC levels. Load orders that apply Requiem levels at runtime through
+  SkyPatcher (`SKSE/Plugins/SkyPatcher/npc/**/*.ini`, `filterByNpcs=...:level=N`) now use those levels instead of the
+  vanilla plugin values.
+* **Curated actor XP kept.** Generated unique-actor XP goes to `Actors/SSLR_Synthesis.ini`; the base wrote `Actors/Default.ini`,
+  replacing Experience's hand-curated list. NPCs already listed in any other actor file are skipped.
+* **Skill books** are detected through Mutagen's `BookSkill` teach target (the base's flag-bit check matches nothing on current Mutagen).
+* `fXPLevelUpBase`/`fXPLevelUpMult` override the vanilla GMSTs instead of adding duplicate records.
+* .NET 9, Mutagen 0.54.4, Synthesis 0.36.6; no Windows-only paths.
 
+## Settings
 
-I have also included 2 proposed Experience ini presets, which share most of the settings apart from killing XP:
-* True_Experience.ini - true unleveled XP, which means XP multiplier is 1.0 and level range is 65535. Killing XP doesn't care of your level / level of the enemy.
-* Reward_Experience.ini - challenge rewarded... XP multiplier is 0.5 and level range is 10. You get full XP only when kill enemy 10 levels above you, and about 1 XP when kill enemy 10 levels below you. On other hand if enemy is 10+ levels above - you get extra credit.
+* **General**: quest patching, level-up curve (default 100/50; vanilla is 75/25), Experience preset (`None`, `TrueUnlevelled`, `ExtraRewarding`).
+* **Skill caps (read by SSLR)**: `fSkillCapBase`, `fSkillCapMult`, `bUseRacialCaps`, optional `iMaxPlayerLevel`.
+* **Skills**: suppress use-based skill gains (AVIF `UseMult = 0`, `bEnableSkillXP = false`), strip skill books (value x2),
+  remove dead "skills improve X% faster/slower" sentences from effect, perk and spell descriptions (Rested, Lover's Comfort,
+  perks using the `ModSkillUse` entry point). Trainers are left untouched: training raises skill levels directly.
+* **Killing XP**: SkyPatcher levels toggle, averaging mode, level-to-XP formula, plus `RaceSettings.json` (Ignore / Unique / Groups / Override).
 
-Pick one via Synthesis Settings, or grab it manually ¯\\\_(ツ)\_/¯
-Feel free to edit proposed values if you like so~
+Quest retyping rules live in `QuestSettings.json` (unchanged from the base).
+
+## Installing
+
+Add as a Git patcher in Synthesis, pointing at this repository and the `SSLR-Experience` project.
+
+Before the first run, delete stale Experience outputs from older patchers, otherwise they shadow the new files:
+`SKSE/Plugins/Experience.ini` and `SKSE/Plugins/Experience/{Races,Actors}/*` in your Synthesis output mod or MO2 overwrite.
+Keep the files shipped by the Experience mod itself.
+
+## Dry run on Linux
+
+`tools/stage_mo2_data.py` stages a merged copy of an MO2 profile's data folder in `/tmp/sslr-run/Data`, then:
+
+```
+dotnet build -c Release SSLR-Experience
+dotnet SSLR-Experience/bin/Release/net9.0/SSLR-Experience.dll run-patcher \
+  --DataFolderPath /tmp/sslr-run/Data --GameRelease SkyrimSE \
+  --LoadOrderFilePath /tmp/sslr-run/plugins.txt \
+  --OutputPath /tmp/sslr-run/out/SSLR_Experience_Patch.esp \
+  --ExtraDataFolder SSLR-Experience/Data
+```
